@@ -3,15 +3,10 @@
   "builds": [
     {
       "src": "vihaan/wsgi.py",
-      "use": "@vercel/python",
-      "config": { "maxLambdaSize": "50mb" }
-    },
-    {
-      "src": "build_files.sh",
-      "use": "@vercel/static-build",
-      "config": { "distDir": "staticfiles" }
+      "use": "@vercel/python"
     }
   ],
+  "buildCommand": "python3 manage.py collectstatic --noinput",
   "routes": [
     { "src": "/static/(.*)", "dest": "/static/$1" },
     { "src": "/(.*)", "dest": "vihaan/wsgi.py" }
