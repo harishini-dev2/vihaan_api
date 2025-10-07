@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Purchase Order WebSocket Client</title>
+</head>
+<body>
+    <h1>WebSocket Client - Purchase Order</h1>
+
+    <label for="token">Token:</label>
+    <input type="text" id="token" placeholder="Enter JWT token">
+    <button onclick="connectWebSocket()">Connect</button>
+
+    <hr>
+
+    <h2>Add Purchase Order</h2>
+    <textarea id="addPayload" rows="10" cols="80">
+{
+  "company_id": 1,
+  "school_id": 1,
+  "style_id": 1,
+  "size_id": 1,
+  "order_date": "2025-09-19T00:00:00",
+  "fy_id": 2025,
+  "total_quantity": 150.5,
+  "description": "Bulk order for uniforms",
+  "created_by": 1,
+  "updated_by": 1
+}
+    </textarea><br>
+    <button onclick="sendAdd()">Send Add</button>
+
+    <h2>Update Purchase Order</h2>
+    <textarea id="updatePayload" rows="6" cols="80">
+{
+  "id": 1,
+  "description": "Updated description"
+}
+    </textarea><br>
+    <button onclick="sendUpdate()">Send Update</button>
+
+    <h2>Soft Delete (Set status=0)</h2>
+    <input type="number" id="deleteId" placeholder="ID to delete">
+    <button onclick="sendDelete()">Send Delete</button>
+
+    <h2>List Records</h2>
+    <button onclick="sendList()">Send List</button>
+
+    <h2>Response:</h2>
+    <pre id="response" style="background:#f3f3f3;padding:10px;border:1px solid #ccc;"></pre>
+
+    <script>
+        let socket = null;
+
+        function connectWebSocket() {
+            const token = document.getElementById("token").value;
+            const wsUrl = `ws://localhost:8000/api/purchase_order-ws/?token=${token}`;
+            
+            socket = new WebSocket(wsUrl);
+
+            socket.onopen = () => {
+                document.getElementById("response").innerText = "WebSocket connected!";
+            };
+
+            socket.onmessage = (event) => {
+                const msg = JSON.parse(event.data);
+                document.getElementById("response").innerText = JSON.stringify(msg, null, 2);
+            };
+
+            socket.onerror = (error) => {
+                console.error("WebSocket error:", error);
+                document.getElementById("response").innerText = "WebSocket error occurred.";
+            };
+
+            socket.onclose = () => {
+                document.getElementById("response").innerText = "WebSocket disconnected.";
+            };
+        }
+
+        function sendAdd() {
+            const payload = JSON.parse(document.getElementById("addPayload").value);
+            socket.send(JSON.stringify({ action: "add", data: payload }));
+        }
+
+        function sendUpdate() {
+            const payload = JSON.parse(document.getElementById("updatePayload").value);
+            socket.send(JSON.stringify({ action: "update", data: payload }));
+        }
+
+        function sendDelete() {
+            const id = parseInt(document.getElementById("deleteId").value);
+            socket.send(JSON.stringify({ action: "delete", data: { id } }));
+        }
+
+        function sendList() {
+            socket.send(JSON.stringify({ action: "list", data: {} }));
+        }
+    </script>
+</body>
+</html>

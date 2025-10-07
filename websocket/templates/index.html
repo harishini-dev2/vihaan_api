@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>WebSocket FastAPI Client</title>
+</head>
+<body>
+  <h2>WebSocket Client - Purchase Order</h2>
+
+  <div>
+    <button onclick="connect()">Connect</button>
+    <button onclick="disconnect()">Disconnect</button>
+  </div>
+
+  <hr>
+
+  <h3>Add Record</h3>
+  <textarea id="addData" rows="5" cols="60">
+{
+  "field1": "value",
+  "field2": "value"
+}
+  </textarea><br>
+  <button onclick="sendAction('add')">Send Add</button>
+
+  <h3>Update Record</h3>
+  <textarea id="updateData" rows="5" cols="60">
+{
+  "id": 1,
+  "field1": "new_value"
+}
+  </textarea><br>
+  <button onclick="sendAction('update')">Send Update</button>
+
+  <h3>Delete Record</h3>
+  <textarea id="deleteData" rows="3" cols="60">
+{
+  "id": 1
+}
+  </textarea><br>
+  <button onclick="sendAction('delete')">Send Delete</button>
+
+  <hr>
+  <h3>WebSocket Messages</h3>
+  <pre id="messages"></pre>
+
+  <script>
+    let socket = null;
+
+    function connect() {
+      // Adjust the URL to your model endpoint, e.g., "purchase_order"
+      const modelName = "purchase_order";
+      const wsUrl = `ws://localhost:8000/api/${modelName}-ws/`;
+      
+      socket = new WebSocket(wsUrl);
+
+      socket.onopen = () => {
+        log("Connected to WebSocket");
+      };
+
+      socket.onmessage = (event) => {
+        log("Received: " + event.data);
+      };
+
+      socket.onclose = () => {
+        log("WebSocket closed");
+      };
+
+      socket.onerror = (err) => {
+        log("Error: " + err.message);
+      };
+    }
+
+    function disconnect() {
+      if (socket) {
+        socket.close();
+        socket = null;
+      }
+    }
+
+    function sendAction(action) {
+      let dataBox;
+      if (action === 'add') {
+        dataBox = document.getElementById('addData').value;
+      } else if (action === 'update') {
+        dataBox = document.getElementById('updateData').value;
+      } else if (action === 'delete') {
+        dataBox = document.getElementById('deleteData').value;
+      }
+
+      let payload;
+      try {
+        payload = JSON.parse(dataBox);
+      } catch (e) {
+        log("Invalid JSON");
+        return;
+      }
+
+      const message = {
+        action: action,
+        data: payload
+      };
+
+      if (socket && socket.readyState === WebSocket.OPEN) {
+        socket.send(JSON.stringify(message));
+        log("Sent: " + JSON.stringify(message));
+      } else {
+        log("WebSocket not connected");
+      }
+    }
+
+    function log(message) {
+      const messagesBox = document.getElementById("messages");
+      messagesBox.textContent += message + "\n";
+    }
+  </script>
+</body>
+</html>
+<!-- // Connect to your WebSocket endpoint
+const ws = new WebSocket("ws://localhost:8000/api/yourmodel-ws/");
+
+// When the connection opens
+ws.onopen = () => {
+  console.log("WebSocket connected");
+
+  // Example: Send 'add' action to create a new record
+  const addMessage = {
+    action: "add",
+    data: {
+      name: "New Item",
+      description: "Created from frontend"
+    }
+  };
+  ws.send(JSON.stringify(addMessage));
+
+  // Example: Send 'update' action after 3 seconds
+  setTimeout(() => {
+    const updateMessage = {
+      action: "update",
+      data: {
+        id: 1,
+        name: "Updated Item"
+      }
+    };
+    ws.send(JSON.stringify(updateMessage));
+  }, 3000);
+
+  // Example: Send 'delete' action after 5 seconds
+  setTimeout(() => {
+    const deleteMessage = {
+      action: "delete",
+      data: {
+        id: 1
+      }
+    };
+    ws.send(JSON.stringify(deleteMessage));
+  }, 5000);
+};
+
+// Listen for messages from the server
+ws.onmessage = (event) => {
+  const message = JSON.parse(event.data);
+  console.log("Received from server:", message);
+};
+
+// Handle errors
+ws.onerror = (error) => {
+  console.error("WebSocket error:", error);
+};
+
+// Handle connection close
+ws.onclose = () => {
+  console.log("WebSocket connection closed");
+};
+
+
+{
+  "action": "list",
+  "data": {
+    "page": 1,
+    "page_size": 10,
+    "filters": {
+      "status": "approved"
+    }
+  }
+} -->

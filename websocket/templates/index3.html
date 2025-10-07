@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Offline Sync with FastAPI</title>
+</head>
+<body>
+  <h1>Purchase Order Form</h1>
+
+  <label>JWT Token:</label><br>
+  <input type="text" id="token" placeholder="Enter token"><br><br>
+
+  <textarea id="poData" rows="10" cols="50">
+{
+  "company_id": 1,
+  "school_id": 1,
+  "style_id": 1,
+  "size_id": 1,
+  "order_date": "2025-09-19T00:00:00",
+  "fy_id": 2025,
+  "total_quantity": 150.5,
+  "description": "Bulk order for uniforms"
+}
+  </textarea><br>
+
+  <button onclick="submitPO()">Submit Purchase Order</button>
+
+  <h3>Status</h3>
+  <pre id="statusLog">Waiting...</pre>
+
+  <script>
+    const API_URL = "http://localhost:8000/api/purchase_order/add/";
+
+    function logStatus(msg) {
+      document.getElementById("statusLog").innerText += `\n${msg}`;
+    }
+
+    async function submitPO() {
+      const token = document.getElementById("token").value;
+      const payload = JSON.parse(document.getElementById("poData").value);
+
+      if (!navigator.onLine) {
+        logStatus("Offline! Saving to localStorage...");
+        saveToLocalQueue(payload);
+      } else {
+        await sendToAPI(payload, token);
+      }
+    }
+
+    function saveToLocalQueue(data) {
+      let queue = JSON.parse(localStorage.getItem("offlineQueue") || "[]");
+      queue.push(data);
+      localStorage.setItem("offlineQueue", JSON.stringify(queue));
+    }
+
+    async function sendToAPI(data, token) {
+      try {
+        const response = await fetch(API_URL, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`
+          },
+          body: JSON.stringify(data)
+        });
+
+        const result = await response.json();
+        if (response.ok) {
+          logStatus("✅ Sent to FastAPI successfully");
+        } else {
+          logStatus("❌ API Error: " + result.detail);
+        }
+      } catch (error) {
+        logStatus("❌ Failed to send to API. Storing locally.");
+        saveToLocalQueue(data);
+      }
+    }
+
+    // Sync when back online
+    window.addEventListener("online", async () => {
+      logStatus("🔌 Back online! Syncing queue...");
+
+      const token = document.getElementById("token").value;
+      const queue = JSON.parse(localStorage.getItem("offlineQueue") || "[]");
+
+      for (let item of queue) {
+        await sendToAPI(item, token);
+      }
+
+      localStorage.removeItem("offlineQueue");
+      logStatus("✅ All offline data synced");
+    });
+  </script>
+</body>
+</html>
+ 
